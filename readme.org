@@ -2,6 +2,7 @@ https://linuxdatahub.com/create-custom-pam-module-for-linux/
 
 
 apt install libpam-dev
+sudo apt install libnss3-dev
 
 #+begin_example
 root@LDH ~]# cat /etc/pam.d/test
@@ -11,6 +12,8 @@ session required pam_limits.so
 [root@LDH ~]#
 #+end_example
 https://www.linuxquestions.org/questions/programming-9/can%27t-get-auth-token-for-non-local-users-with-pam-module-945164/
+
+https://www.gnu.org/software/libc/manual/html_node/NSS-Module-Function-Internals.html#NSS-Module-Function-Internals
 
 
 * chatgpt

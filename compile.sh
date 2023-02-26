@@ -9,12 +9,12 @@ build_pam(){
 }
 
 build_nss(){
-    gcc -shared -o libnss_honeypot.so -Wl,-soname,libnss_honeypot.so libnss_honeypot.c && \
-        sudo install -m 0644 libnss_adam.so.2 $NSS_DIR && \
+    gcc -fPIC -shared -o libnss_honeypot.so.2 -Wl,-soname,libnss_honeypot.so.2 libnss_honeypot.c && \
+        sudo install -m 0644 libnss_honeypot.so.2 $NSS_DIR && \
         sudo /sbin/ldconfig -n /$NSS_DIR /usr/lib        
 }
 
 
-build_pam
-#build_nss
+#build_pam
+build_nss
 
