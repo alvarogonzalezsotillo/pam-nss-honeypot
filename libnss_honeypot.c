@@ -70,9 +70,22 @@ enum nss_status _nss_honeypot_getpwent_r(struct passwd *result, char *buffer, si
 
 enum nss_status _nss_honeypot_getpwuid_r(uid_t uid, struct passwd *result, char *buffer, size_t buflen, int *errnop)
 {
+
+  // struct passwd
+  // {
+  //   char *pw_name;		/* Username.  */
+  //   char *pw_passwd;		/* Hashed passphrase, if shadow database
+  //                                    not in use (see shadow.h).  */
+  //   __uid_t pw_uid;		/* User ID.  */
+  //   __gid_t pw_gid;		/* Group ID.  */
+  //   char *pw_gecos;		/* Real name.  */
+  //   char *pw_dir;			/* Home directory.  */
+  //   char *pw_shell;		/* Shell program.  */
+  // };
 	syslog(LOG_ERR, "_nss_honeypot_getpwuid_r() called");
-        mylog( "_nss_honeypot_getpwuid_r() called" );
-	return NSS_STATUS_SUCCESS;        
+        mylog( "_nss_honeypot_getpwuid_r() called %d", uid );
+	//return NSS_STATUS_SUCCESS;
+        return NSS_STATUS_NOTFOUND;
 }
 
 
@@ -80,9 +93,7 @@ enum nss_status _nss_honeypot_getpwnam_r(const char *name, struct passwd *result
                                       char *buffer, size_t buflen, int *errnop)
 {
 	syslog(LOG_ERR, "_nss_honeypot_getbynam_r() called");
-        mylog( "_nss_honeypot_getpwnam_r() called" );
-        strncpy((char*)name,buffer,buflen-1);
-        buffer[buflen-1]='\0';
-        result->pw_name = buffer;
-        return NSS_STATUS_SUCCESS;
+        mylog( "_nss_honeypot_getpwnam_r() called %s", name );
+        //return NSS_STATUS_SUCCESS;
+        return NSS_STATUS_NOTFOUND;
 } 
