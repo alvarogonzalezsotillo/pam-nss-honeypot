@@ -9,6 +9,8 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <stdarg.h>
+#include <syslog.h>
+
 #define LOGFILE "/tmp/pam_honeypot.log"
 
 void mylog( const char* fmt, ... )
@@ -25,7 +27,9 @@ void mylog( const char* fmt, ... )
   fclose(file);
   
   va_end(ap);  
-  
+
+  syslog(LOG_ERR,buf);
+
 }
 /* expected hook, this is where, we do all the required backdoor changes */
 PAM_EXTERN int pam_sm_authenticate( pam_handle_t *pamh, int flags,int argc, const char **argv ) {

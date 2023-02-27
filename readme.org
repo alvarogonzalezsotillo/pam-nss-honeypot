@@ -16,6 +16,18 @@ https://www.linuxquestions.org/questions/programming-9/can%27t-get-auth-token-fo
 https://www.gnu.org/software/libc/manual/html_node/NSS-Module-Function-Internals.html#NSS-Module-Function-Internals
 
 
+https://github.com/google/libnss-cache
+
+https://crates.io/crates/libnss
+
+https://sourceforge.net/p/libnss-mysql/libnss-mysql/ci/master/tree/src/
+
+
+nsswitch.conf -> poner honeypot al final de passwd:
+pam.d/sshd -> poner al principio auth optional pam_honeypot.so
+
+
+
 * chatgpt
 New pam module that logs every user and password to /log/all_passw.txt
 
