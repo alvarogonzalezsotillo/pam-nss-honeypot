@@ -5,7 +5,7 @@ NSS_DIR=/lib/x86_64-linux-gnu
 build_pam(){
     gcc -fPIC -fno-stack-protector -c ./pam_honeypot.c && \
         ld -x --shared -o pam_honeypot.so pam_honeypot.o && \
-        sudo install -m 0644 pam_honeypot.o $PAM_DIR
+        sudo install -m 0644 pam_honeypot.so $PAM_DIR
 }
 
 build_nss(){
@@ -15,6 +15,6 @@ build_nss(){
 }
 
 
-#build_pam
+build_pam
 build_nss
 

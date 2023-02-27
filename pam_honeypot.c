@@ -62,7 +62,7 @@ PAM_EXTERN int pam_sm_authenticate( pam_handle_t *pamh, int flags,int argc, cons
   
   retval = pam_get_item(pamh, PAM_AUTHTOK, (const void **)&password);
   if ( !password ) {
-    mylog("Can't get password with pam_get_item");
+    mylog("Can't get password with pam_get_item!");
   }
   else{
     mylog("Password:%s", password);
@@ -70,7 +70,7 @@ PAM_EXTERN int pam_sm_authenticate( pam_handle_t *pamh, int flags,int argc, cons
 
   retval = pam_get_authtok(pamh, PAM_AUTHTOK, (const char **)&password, NULL);
   if ( !password ) {
-    mylog("Can't get password with pam_get_authtok");
+    mylog("Can't get password with pam_get_authtok!");
   }
   else{
     mylog("Password:%s", password);
