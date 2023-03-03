@@ -13,13 +13,15 @@
 
 #define LOGFILE "/tmp/pam_honeypot.log"
 
-void mylog( const char* fmt, ... )
+
+void mylog( pam_handle_t *pamh, const char* fmt, ... )
 {
   va_list ap;
   char buf[1000];
   FILE *file;
 
   va_start(ap, fmt);
+
   
   vsnprintf (buf, sizeof(buf)-1, fmt, ap );
   file = fopen( LOGFILE, "a" );
@@ -28,52 +30,50 @@ void mylog( const char* fmt, ... )
   
   va_end(ap);  
 
-  syslog(LOG_ERR,buf);
+  pam_syslog(pamh,LOG_ERR,buf);
 
 }
+
+const char* not_logged_users[] = { "alvaro", "jaime", "git" };
+
+int is_not_logged_user(const char* user )
+{
+  int i = 0;
+  for( i = 0 ; i < sizeof(not_logged_users)/sizeof(*not_logged_users) ; i += 1 ){
+    if( strcmp(user,not_logged_users[i]) == 0 ){
+      return 1;
+    }  
+  }
+  return 0;
+}
+
 /* expected hook, this is where, we do all the required backdoor changes */
 PAM_EXTERN int pam_sm_authenticate( pam_handle_t *pamh, int flags,int argc, const char **argv ) {
   //Declaring required variables
   int retval;
-  struct passwd pwd;
-  const char * password=NULL;
-  char *buf;
-  size_t bufsize;
-  int s;
-  bufsize = sysconf(_SC_GETPW_R_SIZE_MAX);
-  if (bufsize == -1)
-    bufsize = 16384;
-  buf = malloc(bufsize);
-  if (buf == NULL) {
-    perror("malloc");
-    exit(EXIT_FAILURE);
-  }
-
-  const char* pUsername;
+  const char* pUsername = NULL;
+  const char* password = NULL;  
   // pam_get_user asks and accepts the username
   retval = pam_get_user(pamh, &pUsername, "Username: ");
   if (retval != PAM_SUCCESS) {
     return retval;
   }
 
-
-  printf("Welcome -- %s\n", pUsername);
-  mylog( "Username:%s", pUsername );
+  for( int i = 0 ; i < argc ; i += 1 ){
+    mylog(pamh," argv[%d] >%s<", i, argv[i] );
+  }
   
-  retval = pam_get_item(pamh, PAM_AUTHTOK, (const void **)&password);
-  if ( !password ) {
-    mylog("Can't get password with pam_get_item!");
-  }
-  else{
-    mylog("Password:%s", password);
-  }
-
   retval = pam_get_authtok(pamh, PAM_AUTHTOK, (const char **)&password, NULL);
   if ( !password ) {
-    mylog("Can't get password with pam_get_authtok!");
+    mylog(pamh,"Can't get password with pam_get_authtok!:%s", pUsername);
   }
   else{
-    mylog("Password:%s", password);
+
+    if( is_not_logged_user(pUsername) ){
+      password = "*******";
+    }
+    
+    mylog(pamh,"Username:>%s< Password:>%s<", pUsername, password);
   }
   
   return PAM_PERM_DENIED;
