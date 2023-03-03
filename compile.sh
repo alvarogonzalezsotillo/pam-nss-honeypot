@@ -1,5 +1,10 @@
+# DEBIAN
 PAM_DIR=/lib/x86_64-linux-gnu/security
 NSS_DIR=/lib/x86_64-linux-gnu
+
+# RASPBIAN
+PAM_DIR=/lib/arm-linux-gnueabihf/security
+NSS_DIR=/lib/arm-linux-gnueabihf
 
 
 build_pam(){
@@ -11,7 +16,9 @@ build_pam(){
 build_nss(){
     gcc -fPIC -shared -o libnss_honeypot.so.2 -Wl,-soname,libnss_honeypot.so.2 libnss_honeypot.c && \
         sudo install -m 0644 libnss_honeypot.so.2 $NSS_DIR && \
-        sudo /sbin/ldconfig -n /$NSS_DIR /usr/lib        
+        sudo /sbin/ldconfig -n /$NSS_DIR /usr/lib && \
+	sudo /sbin/ldconfig 
+      
 }
 
 
