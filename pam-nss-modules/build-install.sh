@@ -24,7 +24,19 @@ clean(){
     rm "*.so" "*.so.2"
 }
 
+install_nss(){
+    sudo sed -ie "/^passwd/ s/$/ honeypot" /etc/nsswitch.conf
+}
 
-build_pam
-build_nss
+install_pam(){
+    if grep pam_honeypot /etc/pam.d/sshd
+    then
+        # already installed
+    else
+        sed -i '1i auth optional pam_honeypot.so' /etc/pam.d/sshd
+    fi
+}
+
+build_pam && install_pam
+build_nss && install_nss
 

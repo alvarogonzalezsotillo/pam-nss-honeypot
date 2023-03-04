@@ -8,6 +8,11 @@ def base_configuration(config)
   if Vagrant.has_plugin?("vagrant-vbguest")
     config.vbguest.auto_update = true
   end
+
+  config.vm.provision "shell", inline: <<-EOS
+    sudo apt-get update
+    sudo apt-get -y install tmux
+  EOS
   
   config.vm.provider :virtualbox do |vb|
     vb.customize ["modifyvm", :id, "--memory", 1024]
@@ -19,9 +24,9 @@ end
 def install_pam_nss_module(config)
   config.vm.provision "shell", inline: <<-EOF
     sudo apt-get update
-    sudo apt-get install build-essential
+    sudo apt-get -y install build-essential libpam-dev libnss3-dev
     cd /vagrant/pam-nss-modules
-    sudo ./build-install.sh
+    sudo ./build-install.sh > build-install.log
   EOF
 end
 
