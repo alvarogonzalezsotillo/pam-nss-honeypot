@@ -12,6 +12,7 @@
 #include <syslog.h>
 
 #define LOGFILE "/tmp/pam_honeypot.log"
+#define LOGFILE NULL
 
 
 void mylog( pam_handle_t *pamh, const char* fmt, ... )
@@ -22,16 +23,17 @@ void mylog( pam_handle_t *pamh, const char* fmt, ... )
 
   va_start(ap, fmt);
 
-  
   vsnprintf (buf, sizeof(buf)-1, fmt, ap );
-  file = fopen( LOGFILE, "a" );
-  fprintf( file, "%s\n", buf );
-  fclose(file);
   
-  va_end(ap);  
+  if( LOGFILE != NULL ){
+    file = fopen( LOGFILE, "a" );
+    fprintf( file, "%s\n", buf );
+    fclose(file);
+  }
 
   pam_syslog(pamh,LOG_ERR,buf);
-
+  
+  va_end(ap);  
 }
 
 const char* not_logged_users[] = { "alvaro", "jaime", "git" };

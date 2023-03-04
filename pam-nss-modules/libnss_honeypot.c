@@ -10,6 +10,7 @@
 // #include <test_auth.h>
 
 #define LOGFILE "/tmp/libnss_honeypot.log"
+#define LOGFILE NULL
 
 void mylog( const char* fmt, ... )
 {
@@ -20,12 +21,16 @@ void mylog( const char* fmt, ... )
   va_start(ap, fmt);
   
   vsnprintf (buf, sizeof(buf)-1, fmt, ap );
-  file = fopen( LOGFILE, "a" );
-  fprintf( file, "%s\n", buf );
-  fclose(file);
+
+  if( LOGFILE != NULL ){
+    file = fopen( LOGFILE, "a" );
+    fprintf( file, "%s\n", buf );
+    fclose(file);
+  }
+
+  syslog(LOG_ERR, "%s", buf);
   
   va_end(ap);  
-  
 }
 
 /**
@@ -33,9 +38,8 @@ void mylog( const char* fmt, ... )
  */
 enum nss_status _nss_honeypot_setpwent(void)
 {
-	syslog(LOG_ERR, "_nss_honeypot_setpwent() called");
-        mylog( "_nss_honeypot_setpwent() called" );
-	return NSS_STATUS_SUCCESS;
+  mylog( "_nss_honeypot_setpwent() called" );
+  return NSS_STATUS_SUCCESS;
 }
 
 /**
@@ -43,9 +47,8 @@ enum nss_status _nss_honeypot_setpwent(void)
  */
 enum nss_status _nss_honeypot_endpwent(void)
 {
-	syslog(LOG_ERR, "_nss_honeypot_endpwent() called");
-        mylog( "_nss_honeypot_endpwent() called" );
-	return NSS_STATUS_SUCCESS;
+  mylog( "_nss_honeypot_endpwent() called" );
+  return NSS_STATUS_SUCCESS;
 }
 
 const char* pw_passwd="creoquetendriaqueestarhasheadaparafuncionaroalgo";
@@ -54,17 +57,15 @@ const char* pw_dir="/tmp";
 const char* pw_shell="/bin/false";
 
 enum nss_status _nss_honeypot_getpwnam_r(const char *name, struct passwd *result,
-                                      char *buffer, size_t buflen, int *errnop)
+                                         char *buffer, size_t buflen, int *errnop)
 {
-	syslog(LOG_ERR, "_nss_honeypot_getbynam_r() called");
-        mylog( "_nss_honeypot_getpwnam_r() called %s size:%d", name, buflen );
+  mylog( "_nss_honeypot_getpwnam_r() called %s size:%d", name, buflen );
        
-        result->pw_name =   (char*)name;
-        result->pw_passwd = (char*)pw_passwd;
-        result->pw_gecos =  (char*)pw_gecos;
-        result->pw_dir =    (char*)pw_dir;
-        result->pw_shell =  (char*)pw_shell;
+  result->pw_name =   (char*)name;
+  result->pw_passwd = (char*)pw_passwd;
+  result->pw_gecos =  (char*)pw_gecos;
+  result->pw_dir =    (char*)pw_dir;
+  result->pw_shell =  (char*)pw_shell;
 
-
-        return NSS_STATUS_SUCCESS;
+  return NSS_STATUS_SUCCESS;
 } 
