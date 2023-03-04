@@ -1,1 +1,5 @@
 /.vagrant/
+/pam-nss-modules/build-install.log
+/pam-nss-modules/libnss_honeypot.so.2
+/pam-nss-modules/pam_honeypot.o
+/pam-nss-modules/pam_honeypot.so
