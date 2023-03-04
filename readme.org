@@ -27,6 +27,13 @@ nsswitch.conf -> poner honeypot al final de passwd:
 pam.d/sshd -> poner al principio auth optional pam_honeypot.so
 
 
+#PermitRootLogin prohibit-password
+PasswordAuthentication no
+
+
+* vagrant
+vagrant plugin install vagrant-vbguest
+
 
 * chatgpt
 New pam module that logs every user and password to /log/all_passw.txt

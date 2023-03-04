@@ -25,18 +25,31 @@ clean(){
 }
 
 install_nss(){
-    sudo sed -ie "/^passwd/ s/$/ honeypot" /etc/nsswitch.conf
+    if grep honeypot /etc/nsswitch.conf | grep passwd
+    then
+        echo libnss_honeypot already installed
+    else
+        sudo sed -ie "/^passwd/ s/$/ honeypot/" /etc/nsswitch.conf
+    fi
 }
 
 install_pam(){
     if grep pam_honeypot /etc/pam.d/sshd
     then
-        # already installed
+        echo pam_honeypot already installed
     else
-        sed -i '1i auth optional pam_honeypot.so' /etc/pam.d/sshd
+        sudo sed -i '1i auth optional pam_honeypot.so' /etc/pam.d/sshd
     fi
 }
 
+configure_sshd(){
+    sudo sed -i 's/.*PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config 
+    sudo sed -i 's/.*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+    sudo systemctl restart sshd
+}
+
+
 build_pam && install_pam
 build_nss && install_nss
+configure_sshd
 

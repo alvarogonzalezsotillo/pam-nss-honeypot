@@ -5,13 +5,12 @@
 def base_configuration(config)
   config.vm.box = "debian/bullseye64"
 
-  if Vagrant.has_plugin?("vagrant-vbguest")
-    config.vbguest.auto_update = true
-  end
+  config.vbguest.auto_update = true
+  config.vbguest.no_remote = false
 
   config.vm.provision "shell", inline: <<-EOS
     sudo apt-get update
-    sudo apt-get -y install tmux
+    sudo apt-get -y install tmux build-essential # for guest additions
   EOS
   
   config.vm.provider :virtualbox do |vb|
@@ -24,7 +23,7 @@ end
 def install_pam_nss_module(config)
   config.vm.provision "shell", inline: <<-EOF
     sudo apt-get update
-    sudo apt-get -y install build-essential libpam-dev libnss3-dev
+    sudo apt-get -y install libpam-dev libnss3-dev
     cd /vagrant/pam-nss-modules
     sudo ./build-install.sh > build-install.log
   EOF
