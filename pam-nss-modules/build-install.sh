@@ -3,8 +3,8 @@ PAM_DIR=/lib/x86_64-linux-gnu/security
 NSS_DIR=/lib/x86_64-linux-gnu
 
 # RASPBIAN
-PAM_DIR=/lib/arm-linux-gnueabihf/security
-NSS_DIR=/lib/arm-linux-gnueabihf
+# PAM_DIR=/lib/arm-linux-gnueabihf/security
+# NSS_DIR=/lib/arm-linux-gnueabihf
 
 
 build_pam(){
@@ -18,7 +18,10 @@ build_nss(){
         sudo install -m 0644 libnss_honeypot.so.2 $NSS_DIR && \
         sudo /sbin/ldconfig -n /$NSS_DIR /usr/lib && \
 	sudo /sbin/ldconfig 
-      
+}
+
+clean(){
+    rm "*.so" "*.so.2"
 }
 
 
