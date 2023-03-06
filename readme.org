@@ -30,6 +30,8 @@ pam.d/sshd -> poner al principio auth optional pam_honeypot.so
 #PermitRootLogin prohibit-password
 PasswordAuthentication no
 
+* Teleport
+https://goteleport.com/blog/how-to-record-ssh-sessions/
 
 * vagrant
 vagrant plugin install vagrant-vbguest
