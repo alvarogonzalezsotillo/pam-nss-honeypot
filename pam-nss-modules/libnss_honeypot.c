@@ -5,13 +5,12 @@
 #include <nss.h>
 #include <syslog.h>
 #include <stdarg.h>
-
-
 // #include <test_auth.h>
 
 #define LOGFILE "/tmp/libnss_honeypot.log"
-#define LOGFILE NULL
+// #define LOGFILE NULL
 
+// LOG TO SYSLOG AND LOGFILE
 void mylog( const char* fmt, ... )
 {
   va_list ap;
@@ -51,11 +50,13 @@ enum nss_status _nss_honeypot_endpwent(void)
   return NSS_STATUS_SUCCESS;
 }
 
+// SOME GLOBAL CONSTANTS, AVOID MALLOC/FREE ERRORS, I HOPE
 const char* pw_passwd="creoquetendriaqueestarhasheadaparafuncionaroalgo";
 const char* pw_gecos="nombrerealperoesmentira";
 const char* pw_dir="/tmp";
 const char* pw_shell="/bin/false";
 
+// DECIDE IF THE USER IS IN THIS DATABASE
 enum nss_status _nss_honeypot_getpwnam_r(const char *name, struct passwd *result,
                                          char *buffer, size_t buflen, int *errnop)
 {
@@ -67,5 +68,6 @@ enum nss_status _nss_honeypot_getpwnam_r(const char *name, struct passwd *result
   result->pw_dir =    (char*)pw_dir;
   result->pw_shell =  (char*)pw_shell;
 
+  // EVERY POSSIBLE USER IS IN DATABASE
   return NSS_STATUS_SUCCESS;
 } 

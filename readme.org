@@ -30,6 +30,13 @@ pam.d/sshd -> poner al principio auth optional pam_honeypot.so
 #PermitRootLogin prohibit-password
 PasswordAuthentication no
 
+* docker
+
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh ./get-docker.sh --dry-run
+sudo usermod -aG docker pi
+
+sudo docker run -d -p 9000:9000 --name=portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer-ce:latest
 
 * vagrant
 vagrant plugin install vagrant-vbguest

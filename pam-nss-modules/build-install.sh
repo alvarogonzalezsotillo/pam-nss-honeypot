@@ -45,9 +45,8 @@ install_pam(){
 configure_sshd(){
     sudo sed -i 's/.*PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config 
     sudo sed -i 's/.*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
-    sudo systemctl restart sshd
+    sudo systemctl restart sshd || true
 }
-
 
 build_pam && install_pam
 build_nss && install_nss
