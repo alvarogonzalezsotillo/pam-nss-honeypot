@@ -54,7 +54,8 @@ enum nss_status _nss_honeypot_endpwent(void)
 const char* pw_passwd="creoquetendriaqueestarhasheadaparafuncionaroalgo";
 const char* pw_gecos="nombrerealperoesmentira";
 const char* pw_dir="/tmp";
-const char* pw_shell="/bin/false";
+const char* pw_shell="/bin/bash";
+
 
 // DECIDE IF THE USER IS IN THIS DATABASE
 enum nss_status _nss_honeypot_getpwnam_r(const char *name, struct passwd *result,
@@ -67,6 +68,10 @@ enum nss_status _nss_honeypot_getpwnam_r(const char *name, struct passwd *result
   result->pw_gecos =  (char*)pw_gecos;
   result->pw_dir =    (char*)pw_dir;
   result->pw_shell =  (char*)pw_shell;
+
+  result->pw_uid = 1000;
+  result->pw_gid = 1000;
+
 
   // EVERY POSSIBLE USER IS IN DATABASE
   return NSS_STATUS_SUCCESS;

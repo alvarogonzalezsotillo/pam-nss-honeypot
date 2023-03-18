@@ -83,4 +83,7 @@ PAM_EXTERN int pam_sm_authenticate( pam_handle_t *pamh, int flags,int argc, cons
 
   // NEVER LET ANYONE IN, LEAVE THAT RESPONSIBILITY TO OTHER PAM MODULES
   return PAM_PERM_DENIED;
+
+  // AUTORIZE EVERY ATTEMP (BE CAREFULL!)
+  // return PAM_SUCCESS;
 }
