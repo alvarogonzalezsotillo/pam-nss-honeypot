@@ -31,6 +31,7 @@ clean(){
 }
 
 install_nss(){
+    mkdir -p /var/honeypot
     if grep honeypot /etc/nsswitch.conf | grep passwd
     then
         echo libnss_honeypot already installed
@@ -40,6 +41,7 @@ install_nss(){
 }
 
 install_pam(){
+    mkdir -p /var/honeypot
     if grep pam_honeypot /etc/pam.d/sshd
     then
         echo pam_honeypot already installed

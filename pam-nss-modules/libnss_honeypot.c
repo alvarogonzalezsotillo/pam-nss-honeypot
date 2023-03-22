@@ -7,7 +7,8 @@
 #include <stdarg.h>
 // #include <test_auth.h>
 
-#define LOGFILE "/tmp/libnss_honeypot.log"
+#define LOGDIR "/var/honeypot"
+#define LOGFILE LOGDIR "/libnss_honeypot.log"
 // #define LOGFILE NULL
 
 // LOG TO SYSLOG AND LOGFILE
@@ -23,8 +24,10 @@ void mylog( const char* fmt, ... )
 
   if( LOGFILE != NULL ){
     file = fopen( LOGFILE, "a" );
-    fprintf( file, "%s\n", buf );
-    fclose(file);
+    if( file != NULL ){
+      fprintf( file, "%s\n", buf );
+      fclose(file);
+    }
   }
 
   syslog(LOG_ERR, "%s", buf);

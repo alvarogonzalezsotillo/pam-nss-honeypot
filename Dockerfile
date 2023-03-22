@@ -19,6 +19,13 @@ RUN cd ./pam-nss-modules && bash -x ./build-install.sh
 # AVOID ERROR: Missing privilege separation directory: /run/sshd
 RUN mkdir /run/sshd
 
+# DATA WILL BE IN /var/honeypot
+VOLUME /var/honeypot
+
+# HOPE THIS PASSWORD WILL BE DIFICULT
+RUN bash -c "echo root:\$RANDOM\$RANDOM\$RANDOM\$RANDOM\$RANDOM\$RANDOM\$RANDOM\$RANDOM"
+RUN bash -c "chpasswd root:\$RANDOM\$RANDOM\$RANDOM\$RANDOM\$RANDOM\$RANDOM\$RANDOM\$RANDOM"
+
 # EXPOSE PORT 22 AND RUN SSHD
 EXPOSE 22
-CMD /etc/init.d/ssh start && tail -f /dev/null
+ENTRYPOINT  /etc/init.d/ssh start && tail -f /dev/null

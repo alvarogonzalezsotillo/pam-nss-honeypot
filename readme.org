@@ -1,3 +1,44 @@
+
+* Los ataques SSH existen
+
+Tengo instalado un servidor SSH en una raspberry pi. Lo utilizo de nodo bastión para acceder a los ordenadores de mi casa.
+
+Desde el momento en que abrí el puerto correspondiente en el NAT del router, pude ver como se producían multitud de intentos de login. La conclusión más fácil es que un enjambre de bots están patrullando todo internet buscando servidores SSH, y una vez localizados intentan acceder a ellos.
+
+#+begin_src bash
+#!/bin/bash
+filtro_failed(){
+        grep -a -i "Failed password"
+}
+
+directo(){
+    tail -n 10000 -f /var/log/auth.log | filtro_failed
+}
+
+directo
+#+end_src
+
+Ejecutando la función =directo= se puede ver en tiempo real los intentos fallidos. Depende del momento, pero ¡suele haber varios por minuto!
+
+#+begin_example
+Mar 21 18:05:56 raspberrypi sshd[15727]: Failed password for invalid user root from 61.177.173.31 port 59272 ssh2
+Mar 21 18:07:56 raspberrypi sshd[15766]: Failed password for invalid user root from 179.60.147.143 port 38096 ssh2
+Mar 21 18:16:01 raspberrypi sshd[15926]: Failed password for invalid user sysop from 195.226.194.242 port 35010 ssh2
+Mar 21 18:18:11 raspberrypi sshd[16039]: Failed password for invalid user centos from 179.60.147.143 port 34830 ssh2
+Mar 21 18:28:22 raspberrypi sshd[16190]: Failed password for invalid user default from 179.60.147.143 port 36374 ssh2
+Mar 21 18:29:49 raspberrypi sshd[16230]: Failed password for invalid user admin from 221.165.87.21 port 41166 ssh2
+Mar 21 18:29:52 raspberrypi sshd[16230]: Failed password for invalid user admin from 221.165.87.21 port 41166 ssh2
+Mar 21 18:33:06 raspberrypi sshd[16277]: Failed password for invalid user server from 195.226.194.142 port 29648 ssh2
+Mar 21 18:38:36 raspberrypi sshd[16339]: Failed password for invalid user centos from 179.60.147.143 port 4016 ssh2
+Mar 21 18:42:27 raspberrypi sshd[16439]: Failed password for invalid user root from 61.177.173.31 port 26981 ssh2
+Mar 21 18:42:30 raspberrypi sshd[16439]: Failed password for invalid user root from 61.177.173.31 port 26981 ssh2
+Mar 21 18:42:33 raspberrypi sshd[16439]: Failed password for invalid user root from 61.177.173.31 port 26981 ssh2 
+Mar 21 18:42:45 raspberrypi sshd[16457]: Failed password for invalid user maria from 31.41.244.124 port 28964 ssh2
+Mar 21 18:43:56 raspberrypi sshd[16467]: Failed password for invalid user root from 61.177.173.31 port 22820 ssh2 
+Mar 21 18:43:59 raspberrypi sshd[16467]: Failed password for invalid user root from 61.177.173.31 port 22820 ssh2 
+#+end_example>
+
+
 https://linuxdatahub.com/create-custom-pam-module-for-linux/
 
 
@@ -11,6 +52,59 @@ account required pam_test.so
 session required pam_limits.so
 [root@LDH ~]#
 #+end_example
+
+Aunque las trazas de =syslog= ofrecen bastante información, no es posible saber qué contraseña ha sido utilizada. Esto me parecía importante, ya que no estaba seguro de si las contraseñas que se utilizan se /parecen/ a las mías. 
+
+
+* Conseguir las contraseñas
+Openssh-server no vuelca las contraseñas incorrectas al =log= por razones de seguridad (puede ser un usuario legítimo con un simple /typo/). Para conseguir estas contraseñas había varias opciones
+- Usar un /honeypot/ de ssh: No encontré ninguno que me gustase, y me parecía un problema que los clientes de ssh detectasen que se no se trataba de un servidor ssh real
+- Compilar mi propia versión de openssh-server: no quería estar pendiente de las actualizaciones de seguridad, volviendo a compilar el servidor
+- Desarrollar mi propio módulo PAM y añadírselo al servidor ssh: si el código no era complicado, podía estar razonablemente seguro de no crear problemas de seguridad
+
+
+** Módulo PAM
+Un módulo PAM es una librería de enlace dinámico (.so) con funciones especiales para autentificar un usuario. La función más interesante sería como la siguiente:
+
+#+begin_src c++
+PAM_EXTERN int pam_sm_authenticate( pam_handle_t *pamh, int flags,int argc, const char **argv ) {
+  const char* password = NULL;
+  pam_get_authtok(pamh, PAM_AUTHTOK, (const char **)&password, NULL);
+  // AQUÍ TENGO LA CONTRASEÑA EN password
+  return PAM_PERM_DENIED
+}
+#+end_src
+
+Esta función se llamará con la información de login del usuario, y devolverá =PAM_PERM_DENIED= si dicha información no permite su autentificación. Para compilar este módulo, utilizo el siguiente script:
+
+#+begin_src bash
+MULTIARCH=$(gcc -print-multiarch)
+PAM_DIR=/lib/$MULTIARCH/security
+
+build_pam(){
+    gcc -fPIC -fno-stack-protector -c ./pam_honeypot.c && \
+        ld -x --shared -o pam_honeypot.so pam_honeypot.o && \
+        install -m 0644 pam_honeypot.so $PAM_DIR
+}
+#+end_src
+
+Este módulo debe instalarse en el servicio PAM correspondiente. Para ello, se debe añadir la siguiente línea al principio del fichero =/etc/pam.d/sshd=
+#+begin_example
+auth sufficient pam_honeypot.so
+#+end_example
+
+Con esta línea, se permite el acceso al sistema mediante SSH si nuestro módulo acepta el usuario. En otro caso, se continúa con el proceso normal de autentificación.
+
+
+
+
+
+
+
+
+
+
+
 https://www.linuxquestions.org/questions/programming-9/can%27t-get-auth-token-for-non-local-users-with-pam-module-945164/
 
 https://www.gnu.org/software/libc/manual/html_node/NSS-Module-Function-Internals.html#NSS-Module-Function-Internals
@@ -30,14 +124,27 @@ pam.d/sshd -> poner al principio auth optional pam_honeypot.so
 #PermitRootLogin prohibit-password
 PasswordAuthentication no
 
+* Frikismos
+Directorio /var/lib/docker/volumes/var-honeypot/_data
 
+https://raw.githubusercontent.com/frikismos/passwords-in-honeypot/master/pam_honeypot.log
+
+
+crontab -e
+
+ * * * * * cd /var/lib/docker/volumes/var-honeypot/_data && git add * && git commit -m "Automatic commit" && git push github master
+
+* portainer
+https://docs.portainer.io/start/install-ce/server/docker/linux
+docker volume create portainer_data
+docker run -d -p 8000:8000 -p 9443:9443 -p 9000:9000 --name portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer-ce:latest
 * docker
+https://docs.docker.com/engine/install/ubuntu/
 
 curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh ./get-docker.sh --dry-run
 sudo usermod -aG docker pi
 
-sudo docker run -d -p 9000:9000 --name=portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer-ce:latest
 
 * Teleport
 https://goteleport.com/blog/how-to-record-ssh-sessions/
