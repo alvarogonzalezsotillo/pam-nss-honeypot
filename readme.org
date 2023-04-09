@@ -1,24 +1,19 @@
 
-* Los ataques SSH existen
+
+
+* Intentos de conexión a mi SSH
 
 Tengo instalado un servidor SSH en una raspberry pi. Lo utilizo de nodo bastión para acceder a los ordenadores de mi casa.
 
-Desde el momento en que abrí el puerto correspondiente en el NAT del router, pude ver como se producían multitud de intentos de login. La conclusión más fácil es que un enjambre de bots están patrullando todo internet buscando servidores SSH, y una vez localizados intentan acceder a ellos.
+Solo por curiosidad, revisé los ficheros de /syslog/ para comprobar cómo se localizaban los accesos, tanto correctos como incorrectos. En mi caso, estos registros están en el fichero =/var/log/auth.log=
 
 #+begin_src bash
 #!/bin/bash
-filtro_failed(){
-        grep -a -i "Failed password"
-}
-
-directo(){
-    tail -n 10000 -f /var/log/auth.log | filtro_failed
-}
-
-directo
+tail -f /var/log/auth.log | grep "Failed password"
 #+end_src
 
-Ejecutando la función =directo= se puede ver en tiempo real los intentos fallidos. Depende del momento, pero ¡suele haber varios por minuto!
+Ejecutando el /script/ anterior se pueden ver en tiempo real los intentos fallidos. Depende del momento, pero ¡suele haber varios por minuto!  Un enjambre de bots están patrullando todo internet buscando servidores SSH, y una vez localizados intentan acceder a ellos.
+
 
 #+begin_example
 Mar 21 18:05:56 raspberrypi sshd[15727]: Failed password for invalid user root from 61.177.173.31 port 59272 ssh2
@@ -36,32 +31,27 @@ Mar 21 18:42:33 raspberrypi sshd[16439]: Failed password for invalid user root f
 Mar 21 18:42:45 raspberrypi sshd[16457]: Failed password for invalid user maria from 31.41.244.124 port 28964 ssh2
 Mar 21 18:43:56 raspberrypi sshd[16467]: Failed password for invalid user root from 61.177.173.31 port 22820 ssh2 
 Mar 21 18:43:59 raspberrypi sshd[16467]: Failed password for invalid user root from 61.177.173.31 port 22820 ssh2 
-#+end_example>
-
-
-https://linuxdatahub.com/create-custom-pam-module-for-linux/
-
-
-apt install libpam-dev
-sudo apt install libnss3-dev
-
-#+begin_example
-root@LDH ~]# cat /etc/pam.d/test
-auth required pam_test.so
-account required pam_test.so
-session required pam_limits.so
-[root@LDH ~]#
 #+end_example
+
 
 Aunque las trazas de =syslog= ofrecen bastante información, no es posible saber qué contraseña ha sido utilizada. Esto me parecía importante, ya que no estaba seguro de si las contraseñas que se utilizan se /parecen/ a las mías. 
 
 
 * Conseguir las contraseñas
 Openssh-server no vuelca las contraseñas incorrectas al =log= por razones de seguridad (puede ser un usuario legítimo con un simple /typo/). Para conseguir estas contraseñas había varias opciones
-- Usar un /honeypot/ de ssh: No encontré ninguno que me gustase, y me parecía un problema que los clientes de ssh detectasen que se no se trataba de un servidor ssh real
-- Compilar mi propia versión de openssh-server: no quería estar pendiente de las actualizaciones de seguridad, volviendo a compilar el servidor
-- Desarrollar mi propio módulo PAM y añadírselo al servidor ssh: si el código no era complicado, podía estar razonablemente seguro de no crear problemas de seguridad
+- Usar un /honeypot/ de ssh: me parecía un problema que los clientes de ssh detectasen que se no se trataba de un servidor ssh real
+  - https://github.com/desaster/kippo
+  - https://github.com/cowrie/cowrie
+  - https://github.com/madirish/kojoney2
+  - https://github.com/droberson/ssh-honeypot
+  - https://github.com/aabed/dockpot
+  - https://github.com/tnich/honssh
+  - https://github.com/jaksi/sshesame
+  - https://github.com/magisterquis/sshhipot
+- Compilar [[https://metamorphant.de/blog/posts/2021-04-14-ssh-server-opensshd-logging-passwords/][mi propia versión de openssh-server]]: no quería estar pendiente de las actualizaciones de seguridad, volviendo a compilar el servidor
+- Desarrollar mi propio módulo PAM y añadírselo al servidor ssh. [[https://www.redhat.com/sysadmin/pluggable-authentication-modules-pam][PAM (Pluggable Authentication Module)]] es el sistema utilizado por Linux para autenticar a los usuarios. Si el código no era complicado, podía estar razonablemente confiado en no crear problemas de seguridad
 
+La opción más evidente para un /hobby project/ es desarrollar algo en =C=, así que opté por la última opción. 
 
 ** Módulo PAM
 Un módulo PAM es una librería de enlace dinámico (.so) con funciones especiales para autentificar un usuario. La función más interesante sería como la siguiente:
@@ -70,36 +60,134 @@ Un módulo PAM es una librería de enlace dinámico (.so) con funciones especial
 PAM_EXTERN int pam_sm_authenticate( pam_handle_t *pamh, int flags,int argc, const char **argv ) {
   const char* password = NULL;
   pam_get_authtok(pamh, PAM_AUTHTOK, (const char **)&password, NULL);
-  // AQUÍ TENGO LA CONTRASEÑA EN password
+  // AQUÍ TENGO LA CONTRASEÑA EN LA VARIABLE password
+  log_somewhere(password);
   return PAM_PERM_DENIED
 }
 #+end_src
 
-Esta función se llamará con la información de login del usuario, y devolverá =PAM_PERM_DENIED= si dicha información no permite su autentificación. Para compilar este módulo, utilizo el siguiente script:
+Esta función se llamará con la información de login del usuario, y devolverá =PAM_PERM_DENIED= si dicha información no permite su autentificación.
 
-#+begin_src bash
-MULTIARCH=$(gcc -print-multiarch)
-PAM_DIR=/lib/$MULTIARCH/security
+Este módulo debe instalarse en el servicio PAM correspondiente. La idea es seguir utilizando el resto de la configuración PAM, pero que se deba llamar a este módulo en todas las ocasiones. Según la documentación PAM, este módulo es /suficiente/, lo que quiere decir que si no permite el login tampoco lo prohibe, y se consulta al resto de módulos.
 
-build_pam(){
-    gcc -fPIC -fno-stack-protector -c ./pam_honeypot.c && \
-        ld -x --shared -o pam_honeypot.so pam_honeypot.o && \
-        install -m 0644 pam_honeypot.so $PAM_DIR
-}
-#+end_src
-
-Este módulo debe instalarse en el servicio PAM correspondiente. Para ello, se debe añadir la siguiente línea al principio del fichero =/etc/pam.d/sshd=
+Esto se consigue añadiendo la siguiente línea al principio del fichero =/etc/pam.d/sshd=:
 #+begin_example
 auth sufficient pam_honeypot.so
 #+end_example
 
-Con esta línea, se permite el acceso al sistema mediante SSH si nuestro módulo acepta el usuario. En otro caso, se continúa con el proceso normal de autentificación.
+La librería =pam_honeypot.so= debe localizarse en =/lib/$MULTIARCH/security=. Por ejemplo, en un =x86_64= estará en =/lib/x86_64-linux-gnu/security=. El valor de =MULTIARCH= se puede conseguir con el comando =gcc -print-multiarch=.
+
+** ... pero el módulo PAM no funciona
+Si se instala el módulo PAM de la forma descrita, no se consegirán las contraseñas de todos los intentos de login ☹️. Si el usuario existe en el sistema, se conseguirá la contraseña, pero si no existe, la contraseña será algo parecido a =INVALID=. Además, si se configura sshd para que no permita el usuario =root=, tampoco se llega a llamar nunca al módulo PAM. Esto dejaría fuera del log de contraseñas a una gran catidad de intentos de login.
+
+Me costó un poco encontrar [[https://www.linuxquestions.org/questions/programming-9/can%27t-get-auth-token-for-non-local-users-with-pam-module-945164/][la respuesta]], pero cuando el sistema detecta que el usuario no existe, oculta la contraseña al módulo PAM (imagino que para no propagar contraseñas de usuarios legítimos que se confunden de servidor). Este diagrama explica la relación entre SSH, NSS y PAM
+
+La solución es convencer a Linux de que todos los usuarios existen, lo que pasa por desarrollar un módulo NSS.
+
+#+BEGIN_SRC dot :file ./inventado.png :exports results :cmd dot :cmdline -Tpng
+digraph {
+        compound=true;
+        node[shape="Mrecord"];
+
+        intento[label="Intento de conexión SSH\ncon contraseña"];
+        permitroot[label="PermitRootLogin"];
+        passwordauthentication[label="PasswordAuthentication"];
+        invaliduser[label="Invalid user"]
+        NSShoneypot[label="Módulo libnss_honeypot \n (cualquier usuario existe)"]
+        NSSotros[label="Otras bases de datos\n de usuarios \n(/etc/passwd, LDAP...)"]
+        PAMhoneypot[label="Módulo PAM honeypot \n (no acepta ninguna \ncontraseña como válida)"]
+        PAMotros[label="Otros módulos PAM"]
+        FicherosLog[label="Fichero de traza de contraseñas",shape="cylinder"]
 
 
+        subgraph cluster_sshd_config{
+            label="Configuración SSHD (/etc/ssh/sshd_config)";
+            permitroot;
+            passwordauthentication;
+        }
+
+        subgraph cluster_nsswitch_conf{
+            label="Información del usuario (/etc/nsswitch.conf)";
+            NSShoneypot;
+            NSSotros;
+        }
+
+        subgraph cluster_pam_sshd{
+            label="Autenticación y autorización de usuario (/etc/pam.d/sshd)";
+            PAMhoneypot;
+            PAMotros;
+        }
 
 
+        NSSotros -> invaliduser [label="Usuario no encontrado", ltail="cluster_nsswitch_conf"]
+        
+        intento ->  permitroot [lhead="cluster_sshd_config"]
+        permitroot -> invaliduser [label="no"]
+        passwordauthentication -> invaliduser [label="no"]
+
+        permitroot -> NSShoneypot [ltail="cluster_sshd_config", lhead="cluster_nsswitch_conf",label="Usuario validado por sshd"]
+
+        NSShoneypot -> PAMhoneypot [ltail="cluster_nsswitch_conf", lhead="cluster_pam_sshd",label="Usuario validado por NSS"]
+
+        PAMhoneypot -> FicherosLog
 
 
+        ////{rank = same; invaliduser; intento; }
+
+}
+#+END_SRC
+
+#+RESULTS:
+[[file:./inventado.png]]
+
+
+** Módulo NSS
+[[https://en.wikipedia.org/wiki/Name_Service_Switch][Name Service Switch]] es la forma en que Linux configura las bases de datos donde consulta usuarios, grupos de usuarios, nombres de hosts... Por ejemplo, la forma tradicional de almacenar usuarios es el fichero =/etc/passwd=. En vez de basar los usuarios directamente en ese fichero, NSS puede utilizar el proveedor =files=, que lee ese fichero. Se pueden crear otros proveedores de usuarios, de forma que Linux reconozca los usuarios de, por ejemplo, un servicio LDAP. Todos los proveedores se configuran en el fichero =/etc/nsswitch.conf=.
+
+
+Un módulo de NSS es también una librería de enlace dinámico con funciones especiales. En el ejemplo siguiente, cualquier usuario se considera existente, y se le asignan unos valores ficticios a su contraseña, directorio inicial, shell, UID y GID.
+
+#+begin_src C
+const char* pw_passwd=;
+const char* pw_gecos=;
+const char* pw_dir="";
+const char* pw_shell="/bin/bash";
+
+enum nss_status _nss_honeypot_getpwnam_r(const char *name, struct passwd *result,
+                                         char *buffer, size_t buflen, int *errnop)
+{
+  result->pw_name =   name;
+  result->pw_passwd = "contraseña, posiblemente hasheada";
+  result->pw_gecos =  "Nombre real del usuario";
+  result->pw_dir =    "/tmp";
+  result->pw_shell =  "/bin/bash";
+
+  result->pw_uid = 1000;
+  result->pw_gid = 1000;
+
+  return NSS_STATUS_SUCCESS;
+} 
+#+end_src
+
+Una vez compilada la librería e instalada en =/lib/$MULTIARCH= debe añadirse al fichero =/etc/nsswitch.conf/=, de forma que se utilice la base de datos =honeypot= si no se encuentra el usuario en las bases de datos habituales del sistema:
+
+#+begin_src conf
+....
+passwd:         files honeypot
+group:          files
+shadow:         files
+....
+#+end_src
+
+Las instrucciones concretas de compilación e instalación se encuentran en [[file:pam-nss-modules/build-install.sh][build-install.sh]] .
+
+
+** ... pero no en mi sistema real
+Aunque el código no utiliza memoria dinámica, ni punteros, ni arrays, siempre puede haber alguna vulnerabilidad en alguna parte. Estas librerías no deberían usarse en un sistema real. Como medida de precaución, he creado un [[file:Dockerfile][Dockerfile]] para ejecutarlo en un entorno algo más controlado.
+
+En una imagen basada en Debian, instalo las dependencias, compilo e instalo los módulos PAM y NSS, y creo el usuario con UID 1000. Este usuario se corresponde con el UID que el módulo NSS utilizará para todos los posibles nombres de usuario.
+
+Detalles en el /script/ [[file:build.sh]] y en el [[file:Dockerfile][Dockerfile]].
 
 
 
@@ -232,3 +320,20 @@ swift
     Test the configuration by logging in to the system with a valid username and password. Check the "/log/all_passw.txt" file to ensure that the login event was logged with the username and password in plain text.
 
 Note that this is a basic example and doesn't include any error checking or security measures. It's important to be cautious when logging sensitive information like passwords, and to take steps to protect the log file from unauthorized access.
+
+
+
+
+https://linuxdatahub.com/create-custom-pam-module-for-linux/
+
+
+apt install libpam-dev
+sudo apt install libnss3-dev
+
+#+begin_example
+root@LDH ~]# cat /etc/pam.d/test
+auth required pam_test.so
+account required pam_test.so
+session required pam_limits.so
+[root@LDH ~]#
+#+end_example

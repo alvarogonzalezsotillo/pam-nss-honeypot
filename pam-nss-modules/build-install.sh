@@ -13,6 +13,11 @@ PAM_DIR=/lib/$MULTIARCH/security
 NSS_DIR=/lib/$MULTIARCH
 
 
+install_prerrequisites(){
+    apt install libpam-dev
+    apt install libnss3-dev
+}
+
 build_pam(){
     gcc -fPIC -fno-stack-protector -c ./pam_honeypot.c && \
         ld -x --shared -o pam_honeypot.so pam_honeypot.o && \
