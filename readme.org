@@ -179,16 +179,22 @@ shadow:         files
 ....
 #+end_src
 
-Las instrucciones concretas de compilación e instalación se encuentran en [[file:pam-nss-modules/build-install.sh][build-install.sh]] .
+Las instrucciones concretas de compilación e instalación se encuentran en [[file:pam-nss-modules/build-install-pam-nss.sh][build-install-nss-pam.sh]] .
 
 
 ** ... pero no en mi sistema real
 Aunque el código no utiliza memoria dinámica, ni punteros, ni arrays, siempre puede haber alguna vulnerabilidad en alguna parte. Estas librerías no deberían usarse en un sistema real. Como medida de precaución, he creado un [[file:Dockerfile][Dockerfile]] para ejecutarlo en un entorno algo más controlado.
 
-En una imagen basada en Debian, instalo las dependencias, compilo e instalo los módulos PAM y NSS, y creo el usuario con UID 1000. Este usuario se corresponde con el UID que el módulo NSS utilizará para todos los posibles nombres de usuario.
+En una imagen basada en Debian, instalo las dependencias, compilo e instalo los módulos PAM y NSS, y creo el usuario con UID 1000. Este usuario se corresponde con el UID que el módulo NSS utilizará para todos los posibles nombres de usuario, y que acabará siendo el UID del usuario de la máquina host de docker.
 
-Detalles en el /script/ [[file:build.sh]] y en el [[file:Dockerfile][Dockerfile]].
+Detalles en el /script/ [[file:build-docker.sh][build-docker.sh]] y en el [[file:Dockerfile][Dockerfile]].
 
+
+
+* ¿Me atrevo contra un intruso?
+Este es un [[https://www.akamai.com/blog/security/high-interaction-honeypot-versus-low-interaction-honeypot-comparison][/honeypot/ de baja interacción]]. En un futuro, mi intención es dejar que el atacante entre en el sistema y monitorizar sus acciones. El sistema debería ser lo más real posible, lo que implica que es una actividad arriesgada.
+
+Mi plan es separar la red principal de mi casa de la red a la que accedería el intruso, quizás mediante un NAT y otras reglas de /firewall/.
 
 
 
