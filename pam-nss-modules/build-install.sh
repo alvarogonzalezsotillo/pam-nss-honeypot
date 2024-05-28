@@ -56,6 +56,13 @@ configure_sshd(){
     systemctl restart sshd || true # DOESNT WORK INSIDE DOCKER, THERE IS NO SYSTEMD
 }
 
+if [ "raspberrypi" = "$(hostname)" ]
+then
+    echo "NOT IN REAL HARDWARE"
+    exit
+fi
+
+
 build_pam && \
     install_pam && \
     build_nss && \
