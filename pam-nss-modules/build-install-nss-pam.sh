@@ -8,7 +8,9 @@
 # PAM_DIR=/lib/arm-linux-gnueabihf/security
 # NSS_DIR=/lib/arm-linux-gnueabihf
 
-MULTIARCH=$(gcc -print-multiarch)
+GCC=gcc
+
+MULTIARCH=$($GCC -print-multiarch)
 PAM_DIR=/lib/$MULTIARCH/security
 NSS_DIR=/lib/$MULTIARCH
 
@@ -19,13 +21,13 @@ install_prerrequisites(){
 }
 
 build_pam(){
-    gcc -fPIC -fno-stack-protector -c ./pam_honeypot.c && \
+    $GCC -fPIC -fno-stack-protector -c ./pam_honeypot.c && \
         ld -x --shared -o pam_honeypot.so pam_honeypot.o && \
         install -m 0644 pam_honeypot.so $PAM_DIR
 }
 
 build_nss(){
-    gcc -fPIC -shared -o libnss_honeypot.so.2 -Wl,-soname,libnss_honeypot.so.2 libnss_honeypot.c && \
+    $GCC -fPIC -shared -o libnss_honeypot.so.2 -Wl,-soname,libnss_honeypot.so.2 libnss_honeypot.c && \
         install -m 0644 libnss_honeypot.so.2 $NSS_DIR && \
         /sbin/ldconfig -n /$NSS_DIR /usr/lib && \
 	/sbin/ldconfig 
