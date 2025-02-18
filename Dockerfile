@@ -2,15 +2,13 @@ FROM debian:12.8
 
 # APT CACHE. CHECK DATE, BECAUSE SOME IMAGES ARE INCOMPATIBLE.
 RUN date
-RUN apt-get clean && apt-get update && apt-get -y upgrade
+RUN apt-get clean && apt-get update && apt-get -y upgrade && apt-get install -y tmux openssh-server build-essential gcc libpam-dev libnss3-dev sudo
+
 
 # CREATE FAKE USER, LINK TO USER 1000 OF CONTAINER HOST
 # INSTALL TOOLS
 RUN bash -c "chpasswd root:\$RANDOM\$RANDOM\$RANDOM\$RANDOM\$RANDOM\$RANDOM\$RANDOM\$RANDOM"  && \
-    useradd --uid 1000 --user-group legituser-notfake && \
-    apt-get update && \
-    apt-get upgrade && \
-    apt-get install -y tmux openssh-server build-essential gcc libpam-dev libnss3-dev sudo
+    useradd --uid 1000 --user-group legituser-notfake 
 
 RUN rm -rf /var/lib/apt/lists/*
 
